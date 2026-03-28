@@ -11,7 +11,19 @@ A Discord bot that alerts your server whenever a tracked player **nobles a villa
 - `/watch remove` – Delete a rule by its short ID.
 - Rules persist across bot restarts (JSON file).
 - Polls the TribalWars `get_conquer` endpoint every 5 minutes by default.
-- Deployable to **Azure App Service** (or any Docker host) via the included `Dockerfile`.
+- Deployable to **Azure Container Apps** via the included `Dockerfile` and GitHub Actions CI/CD pipeline.
+
+---
+
+## How It Works
+
+A single container runs the bot process 24/7. It maintains a WebSocket connection to Discord for slash commands and runs a background polling loop that:
+
+1. Every 5 minutes, fetches recent conquer events from the TribalWars API for each world that has active watch rules.
+2. Checks each event against all watch rules — a rule matches when the tracked player nobles a village inside the specified coordinate bounding box.
+3. Posts a rich embed alert to the configured Discord channel for each match.
+
+One bot instance serves **all** Discord servers that have invited it. Watch rules are stored per-guild in a shared JSON file.
 
 ---
 
@@ -55,15 +67,22 @@ docker run -d --env-file .env -v $(pwd)/data:/app/data tw-watcher
 
 ## Deploy to Azure
 
-### Azure App Service (Container)
+The bot is deployed to **Azure Container Apps** with automatic CI/CD via GitHub Actions. Full details are in [docs/azure-deployment-plan.md](docs/azure-deployment-plan.md).
 
-1. Push the image to Azure Container Registry (ACR):
-   ```bash
-   az acr build --registry <your-acr> --image tw-watcher:latest .
-   ```
-2. Create an App Service Plan (Linux) and a Web App for Containers pointing at your ACR image.
-3. Set application settings (`DISCORD_TOKEN`, optionally `RULES_FILE`, `POLL_INTERVAL_SECONDS`).
-4. Mount an Azure Files share at `/app/data` to persist the rules JSON across container restarts.
+**Current deployment:**
+- **Resource Group:** `tg-tribalwars-rg` (East US)
+- **Container App:** `tg-tribalwars-bot`
+- **ACR:** `tylergreer.azurecr.io`
+- **CI/CD:** Every push to `main` builds the Docker image, pushes to ACR, and updates the Container App.
+- **Manual deploy:** `gh workflow run deploy.yml --repo tgreer812/TribalWarsPlayerWatcher --ref main`
+
+### Add the Bot to a Discord Server
+
+```
+https://discord.com/oauth2/authorize?client_id=1487299730001232022&permissions=18432&scope=bot+applications.commands
+```
+
+Open this URL, select your server, and authorize. Slash commands may take up to 1 hour to appear.
 
 ---
 
