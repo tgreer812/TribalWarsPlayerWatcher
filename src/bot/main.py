@@ -232,14 +232,16 @@ async def _check_world(client: WatcherBot, world: str) -> None:
         log.warning("Failed to fetch conquers for %s: %s", world, exc)
         return
 
+    # Advance the checkpoint now so we never re-process the same time window,
+    # even if the village/player fetch below fails.
+    _last_checked[world] = now
+
     if not events:
-        _last_checked[world] = now
         return
 
     # Only fetch villages/players if there are events to process
     rules = [r for r in client.store.all() if r.world == world]
     if not rules:
-        _last_checked[world] = now
         return
 
     try:
@@ -263,8 +265,6 @@ async def _check_world(client: WatcherBot, world: str) -> None:
                 old_owner = players.get(event.old_owner_id)
                 old_name = old_owner.name if old_owner else "Barbarian"
                 await _send_alert(client, rule, village, old_name, event.timestamp)
-
-    _last_checked[world] = now
 
 
 async def _send_alert(
