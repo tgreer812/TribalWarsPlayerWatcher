@@ -88,6 +88,26 @@ class WatcherBot(discord.Client):
 
 bot = WatcherBot()
 
+
+@bot.tree.error
+async def on_app_command_error(
+    interaction: discord.Interaction,
+    error: app_commands.AppCommandError,
+) -> None:
+    """Global handler – catches unhandled slash-command errors and replies
+    instead of letting the interaction time out silently."""
+    log.error("Slash command error: %s", error, exc_info=error)
+    message = "Something went wrong. Please check the world code (e.g. `en153`) and try again."
+
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+    except discord.DiscordException:
+        pass  # interaction may have expired
+
+
 # ---------------------------------------------------------------------------
 # Slash commands  –  /watch  (group)
 # ---------------------------------------------------------------------------
