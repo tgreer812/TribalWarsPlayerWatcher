@@ -15,8 +15,11 @@ import time
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 
+import discord
+
 from tribalwars import ConquerEvent, Player, TribalWarsClient, Village
 from watcher import RuleStore, WatchRule
+from main import _send_alert, WatcherBot
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +283,50 @@ class TestRuleStore(unittest.TestCase):
         self._add(guild_id=10)
         self._add(guild_id=20)
         self.assertEqual(len(self.store.all()), 2)
+
+
+# ---------------------------------------------------------------------------
+# _send_alert tests
+# ---------------------------------------------------------------------------
+
+class TestSendAlert(unittest.IsolatedAsyncioTestCase):
+    async def test_send_alert_mentions_everyone(self):
+        mock_channel = AsyncMock(spec=discord.TextChannel)
+        mock_client = MagicMock(spec=WatcherBot)
+        mock_client.get_channel = MagicMock(return_value=mock_channel)
+
+        rule = WatchRule(
+            id="test-id",
+            guild_id=1,
+            channel_id=42,
+            world="en153",
+            player_id=1,
+            player_name="TestPlayer",
+            x_min=400, x_max=600,
+            y_min=400, y_max=600,
+        )
+        village = Village(id=100, name="Test Village", x=450, y=500, player_id=1, points=3000, rank=5)
+
+        await _send_alert(mock_client, rule, village, "Barbarian", 0)
+
+        mock_channel.send.assert_awaited_once()
+        call_kwargs = mock_channel.send.call_args
+        self.assertEqual(call_kwargs.kwargs.get("content") or call_kwargs[1].get("content"), "@everyone")
+        self.assertIsInstance(call_kwargs.kwargs.get("embed") or call_kwargs[1].get("embed"), discord.Embed)
+
+    async def test_send_alert_skips_missing_channel(self):
+        mock_client = MagicMock(spec=WatcherBot)
+        mock_client.get_channel = MagicMock(return_value=None)
+
+        rule = WatchRule(
+            id="test-id", guild_id=1, channel_id=42, world="en153",
+            player_id=1, player_name="TestPlayer",
+            x_min=400, x_max=600, y_min=400, y_max=600,
+        )
+        village = Village(id=100, name="V", x=450, y=500, player_id=1, points=3000, rank=5)
+
+        # Should not raise
+        await _send_alert(mock_client, rule, village, "Barbarian", 0)
 
 
 if __name__ == "__main__":

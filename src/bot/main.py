@@ -292,7 +292,7 @@ async def _send_alert(
     embed.set_footer(text=f"Rule ID: {rule.id[:8]}")
 
     try:
-        await channel.send(embed=embed)
+        await channel.send(content="@everyone", embed=embed)
     except discord.DiscordException as exc:
         log.warning("Failed to send alert to channel %d: %s", rule.channel_id, exc)
 

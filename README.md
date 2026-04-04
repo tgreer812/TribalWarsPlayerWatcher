@@ -51,8 +51,16 @@ cp .env.example .env
 ### 3. Run Locally
 
 ```bash
+python -m venv .venv
+
+# Activate the virtual environment
+# Windows (PowerShell):
+.venv\Scripts\activate
+# macOS / Linux:
+source .venv/bin/activate
+
 pip install -r requirements.txt
-cd bot
+cd src/bot
 python main.py
 ```
 
@@ -127,6 +135,20 @@ The bot uses the public [Tribal Wars world data endpoints](https://forum.tribalw
 ## Development
 
 ```bash
+python -m venv .venv
+
+# Activate the virtual environment
+# Windows (PowerShell):
+.venv\Scripts\activate
+# macOS / Linux:
+source .venv/bin/activate
+
 pip install -r requirements.txt
-python -m pytest tests/ -v
+pip install pytest
+
+# Run tests (from the src/ directory)
+cd src
+DISCORD_TOKEN=test-token python -m pytest tests/ -v
 ```
+
+> **Note:** The venv directory (`.venv/`) is already in `.gitignore` and will not be committed.
